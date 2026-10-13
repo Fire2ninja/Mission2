@@ -22,4 +22,3 @@ Route::controller(gererFraisController::class)->group(function () {
     Route::get('/gererFrais', 'saisirFrais')->name('chemin_gestionFrais');
     Route::post('/sauvegarderFrais', 'sauvegarderFrais')->name('chemin_sauvegardeFrais');
 });
-
