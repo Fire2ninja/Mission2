@@ -13,12 +13,12 @@ Route::controller(connexionController::class)->group(function () {
     Route::get('/deconnexion', 'deconnecter')->name('chemin_deconnexion');
 });
 
-Route::controller(etatFraisController::class)->group(function () {
+Route::controller(etatFraisController::class)->middleware('connecte:visiteur')->group(function () {
     Route::get('/selectionMois', 'selectionnerMois')->name('chemin_selectionMois');
     Route::post('/listeFrais', 'voirFrais')->name('chemin_listeFrais');
 });
 
-Route::controller(gererFraisController::class)->group(function () {
+Route::controller(gererFraisController::class)->middleware('connecte:visiteur')->group(function () {
     Route::get('/gererFrais', 'saisirFrais')->name('chemin_gestionFrais');
     Route::post('/sauvegarderFrais', 'sauvegarderFrais')->name('chemin_sauvegardeFrais');
 });
