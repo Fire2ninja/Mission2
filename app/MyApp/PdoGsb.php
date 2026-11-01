@@ -40,10 +40,10 @@ class PdoGsb
     public function getInfosVisiteur($login, $mdp)
     {
         $req = "select visiteur.id as id, visiteur.nom as nom, visiteur.prenom as prenom from visiteur
-        where visiteur.login='" . $login . "' and visiteur.mdp='" . $mdp . "'";
-        $rs    = $this->monPdo->query($req);
-        $ligne = $rs->fetch();
-        return $ligne;
+        where visiteur.login = :login and visiteur.mdp = :mdp";
+        $rs = $this->monPdo->prepare($req);
+        $rs->execute(['login' => $login, 'mdp' => $mdp]);
+        return $rs->fetch();
     }
 
     public function getInfosGestionnaire($login, $mdp)
@@ -68,11 +68,11 @@ class PdoGsb
         $req = "select fraisforfait.id as idfrais, fraisforfait.libelle as libelle,
 		lignefraisforfait.quantite as quantite from lignefraisforfait inner join fraisforfait
 		on fraisforfait.id = lignefraisforfait.idfraisforfait
-		where lignefraisforfait.idvisiteur ='$idVisiteur' and lignefraisforfait.mois='$mois'
+		where lignefraisforfait.idvisiteur = :idVisiteur and lignefraisforfait.mois = :mois
 		order by lignefraisforfait.idfraisforfait";
-        $res       = $this->monPdo->query($req);
-        $lesLignes = $res->fetchAll();
-        return $lesLignes;
+        $res = $this->monPdo->prepare($req);
+        $res->execute(['idVisiteur' => $idVisiteur, 'mois' => $mois]);
+        return $res->fetchAll();
     }
 
     /**
@@ -102,10 +102,11 @@ class PdoGsb
         $lesCles = array_keys($lesFrais);
         foreach ($lesCles as $unIdFrais) {
             $qte = $lesFrais[$unIdFrais];
-            $req = "update lignefraisforfait set lignefraisforfait.quantite = $qte
-			where lignefraisforfait.idvisiteur = '$idVisiteur' and lignefraisforfait.mois = '$mois'
-			and lignefraisforfait.idfraisforfait = '$unIdFrais'";
-            $this->monPdo->exec($req);
+            $req = "update lignefraisforfait set lignefraisforfait.quantite = :qte
+			where lignefraisforfait.idvisiteur = :idVisiteur and lignefraisforfait.mois = :mois
+			and lignefraisforfait.idfraisforfait = :unIdFrais";
+            $rs = $this->monPdo->prepare($req);
+            $rs->execute(['qte' => $qte, 'idVisiteur' => $idVisiteur, 'mois' => $mois, 'unIdFrais' => $unIdFrais]);
         }
 
     }
@@ -121,8 +122,9 @@ class PdoGsb
     {
         $ok  = false;
         $req = "select count(*) as nblignesfrais from fichefrais
-		where fichefrais.mois = '$mois' and fichefrais.idvisiteur = '$idVisiteur'";
-        $res     = $this->monPdo->query($req);
+		where fichefrais.mois = :mois and fichefrais.idvisiteur = :idVisiteur";
+        $res = $this->monPdo->prepare($req);
+        $res->execute(['mois' => $mois, 'idVisiteur' => $idVisiteur]);
         $laLigne = $res->fetch();
         if ($laLigne['nblignesfrais'] == 0) {
             $ok = true;
@@ -138,8 +140,9 @@ class PdoGsb
      */
     public function dernierMoisSaisi($idVisiteur)
     {
-        $req         = "select max(mois) as dernierMois from fichefrais where fichefrais.idvisiteur = '$idVisiteur'";
-        $res         = $this->monPdo->query($req);
+        $req         = "select max(mois) as dernierMois from fichefrais where fichefrais.idvisiteur = :idVisiteur";
+        $res = $this->monPdo->prepare($req);
+        $res->execute(['idVisiteur' => $idVisiteur]);
         $laLigne     = $res->fetch();
         $dernierMois = $laLigne['dernierMois'];
         return $dernierMois;
@@ -162,14 +165,16 @@ class PdoGsb
 
         }
         $req = "insert into fichefrais(idvisiteur,mois,nbJustificatifs,montantValide,dateModif,idEtat)
-		values('$idVisiteur','$mois',0,0,now(),'CR')";
-        $this->monPdo->exec($req);
+		values(:idVisiteur,:mois,0,0,now(),'CR')";
+        $rs = $this->monPdo->prepare($req);
+        $rs->execute(['idVisiteur' => $idVisiteur, 'mois' => $mois]);
         $lesIdFrais = $this->getLesIdFrais();
         foreach ($lesIdFrais as $uneLigneIdFrais) {
             $unIdFrais = $uneLigneIdFrais['idfrais'];
             $req       = "insert into lignefraisforfait(idvisiteur,mois,idFraisForfait,quantite)
-			values('$idVisiteur','$mois','$unIdFrais',0)";
-            $this->monPdo->exec($req);
+			values(:idVisiteur,:mois,:unIdFrais,0)";
+            $rs = $this->monPdo->prepare($req);
+            $rs->execute(['idVisiteur' => $idVisiteur, 'mois' => $mois, 'unIdFrais' => $unIdFrais]);
         }
     }
 
@@ -181,9 +186,10 @@ class PdoGsb
      */
     public function getLesMoisDisponibles($idVisiteur)
     {
-        $req = "select fichefrais.mois as mois from  fichefrais where fichefrais.idvisiteur ='$idVisiteur'
+        $req = "select fichefrais.mois as mois from  fichefrais where fichefrais.idvisiteur = :idVisiteur
 		order by fichefrais.mois desc ";
-        $res     = $this->monPdo->query($req);
+        $res = $this->monPdo->prepare($req);
+        $res->execute(['idVisiteur' => $idVisiteur]);
         $lesMois = [];
         $laLigne = $res->fetch();
         while ($laLigne != null) {
@@ -211,8 +217,9 @@ class PdoGsb
     {
         $req = "select fichefrais.idEtat as idEtat, fichefrais.dateModif as dateModif, fichefrais.nbJustificatifs as nbJustificatifs,
 			fichefrais.montantValide as montantValide, etat.libelle as libEtat from  fichefrais inner join etat on fichefrais.idEtat = etat.id
-			where fichefrais.idvisiteur ='$idVisiteur' and fichefrais.mois = '$mois'";
-        $res     = $this->monPdo->query($req);
+			where fichefrais.idvisiteur = :idVisiteur and fichefrais.mois = :mois";
+        $res = $this->monPdo->prepare($req);
+        $res->execute(['idVisiteur' => $idVisiteur, 'mois' => $mois]);
         $laLigne = $res->fetch();
         return $laLigne;
     }
@@ -228,9 +235,11 @@ class PdoGsb
 
     public function majEtatFicheFrais($idVisiteur, $mois, $etat)
     {
-        $req = "update ficheFrais set idEtat = '$etat', dateModif = now()
-		where fichefrais.idvisiteur ='$idVisiteur' and fichefrais.mois = '$mois'";
-        $this->monPdo->exec($req);
-    }
+        $req = "update ficheFrais set idEtat = :etat, dateModif = now()
+		where fichefrais.idvisiteur = :idVisiteur and fichefrais.mois = :mois";
+        $rs = $this->monPdo->prepare($req);
+        $rs->execute(['etat' => $etat, 'idVisiteur' => $idVisiteur, 'mois' => $mois]);    }
+
+
 
 }
