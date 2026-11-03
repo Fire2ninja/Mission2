@@ -35,10 +35,66 @@ class PdoGsb{
      */
 	public function getInfosVisiteur($login, $mdp){
 		$req = "select visiteur.id as id, visiteur.nom as nom, visiteur.prenom as prenom from visiteur
-        where visiteur.login='" . $login . "' and visiteur.mdp='" . $mdp ."'";
-    	$rs = $this->monPdo->query($req);
+        where visiteur.login = :login and visiteur.mdp = :mdp";
+    	$rs = $this->monPdo->prepare($req);
+		$rs->execute(['login' => $login, 'mdp' => $mdp]);
 		$ligne = $rs->fetch();
 		return $ligne;
+	}
+
+	/**
+	 * Retourne les informations d'un gestionnaire authentifié.
+	 */
+	public function getInfosGestionnaire($login, $mdp){
+		$req = "select gestionnaire.id as id, gestionnaire.nom as nom, gestionnaire.prenom as prenom
+			from gestionnaire where gestionnaire.login = :login and gestionnaire.mdp = :mdp";
+		$rs = $this->monPdo->prepare($req);
+		$rs->execute(['login' => $login, 'mdp' => $mdp]);
+		return $rs->fetch();
+	}
+
+	/**
+	 * Retourne les visiteurs pouvant être gérés.
+	 */
+	public function getLesVisiteurs(){
+		$req = "select visiteur.id as id, visiteur.nom as nom, visiteur.prenom as prenom
+			from visiteur order by visiteur.nom, visiteur.prenom";
+		$res = $this->monPdo->query($req);
+		return $res->fetchAll(PDO::FETCH_ASSOC);
+	}
+
+	/**
+	 * Retourne un visiteur à partir de son identifiant.
+	 */
+	public function getVisiteur($idVisiteur){
+		$req = "select visiteur.id as id, visiteur.nom as nom, visiteur.prenom as prenom
+			from visiteur where visiteur.id = :id";
+		$res = $this->monPdo->prepare($req);
+		$res->execute(['id' => $idVisiteur]);
+		return $res->fetch(PDO::FETCH_ASSOC);
+	}
+
+	/**
+	 * Indique si un visiteur possède au moins une fiche de frais.
+	 */
+	public function aDesFichesDeFrais($idVisiteur){
+		$req = "select 1 from fichefrais where fichefrais.idVisiteur = :id limit 1";
+		$res = $this->monPdo->prepare($req);
+		$res->execute(['id' => $idVisiteur]);
+		return $res->fetchColumn() !== false;
+	}
+
+	/**
+	 * Supprime un visiteur uniquement s'il ne possède aucune fiche de frais.
+	 */
+	public function supprimerVisiteur($idVisiteur){
+		$req = "delete from visiteur where visiteur.id = :id
+			and not exists (
+				select 1 from fichefrais where fichefrais.idVisiteur = :ficheId
+			)";
+		$res = $this->monPdo->prepare($req);
+		$res->execute(['id' => $idVisiteur, 'ficheId' => $idVisiteur]);
+		return $res->rowCount() === 1;
 	}
 
     /**
@@ -63,7 +119,7 @@ class PdoGsb{
     /**
      * Retourne tous les id de la table FraisForfait
      * @return array|false
-     * return un tableau associatif
+     * return un tableau associatif      
      */
 	public function getLesIdFrais(){
 		$req = "select fraisforfait.id as idfrais from fraisforfait order by fraisforfait.id";
