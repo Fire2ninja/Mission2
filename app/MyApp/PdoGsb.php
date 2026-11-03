@@ -3,6 +3,8 @@ namespace App\MyApp;
 
 use Illuminate\Support\Facades\Config;
 use PDO;
+use RuntimeException;
+use Throwable;
 
 class PdoGsb
 {
@@ -23,7 +25,12 @@ class PdoGsb
         self::$bdd     = 'dbname=' . Config::get('database.connections.mysql.database');
         self::$user    = Config::get('database.connections.mysql.username');
         self::$mdp     = Config::get('database.connections.mysql.password');
-        $this->monPdo  = new PDO(self::$serveur . ';' . self::$bdd, self::$user, self::$mdp);
+        $this->monPdo  = new PDO(
+            self::$serveur . ';' . self::$bdd,
+            self::$user,
+            self::$mdp,
+            [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+        );
         $this->monPdo->query("SET CHARACTER SET utf8");
     }
     public function _destruct()
@@ -53,6 +60,103 @@ class PdoGsb
         $rs = $this->monPdo->prepare($req);
         $rs->execute(['login' => $login, 'mdp' => $mdp]);
         return $rs->fetch();
+    }
+
+    public function getLesVisiteurs(): array
+    {
+        $req = "select id, nom, prenom from visiteur order by nom, prenom";
+        $res = $this->monPdo->query($req);
+        return $res->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getVisiteur(string $idVisiteur): array|false
+    {
+        $req = "select * from visiteur where id = :id";
+        $res = $this->monPdo->prepare($req);
+        $res->execute(['id' => $idVisiteur]);
+        return $res->fetch(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Archive the visitor and related expense data, then remove them atomically.
+     *
+     * @return string|null Archive path, or null when the visitor does not exist.
+     */
+    public function archiverEtSupprimerVisiteur(string $idVisiteur, callable $archiver): ?string
+    {
+        $this->monPdo->beginTransaction();
+
+        try {
+            $requeteVisiteur = $this->monPdo->prepare(
+                "select * from visiteur where id = :id for update"
+            );
+            $requeteVisiteur->execute(['id' => $idVisiteur]);
+            $visiteur = $requeteVisiteur->fetch(PDO::FETCH_ASSOC);
+
+            if ($visiteur === false) {
+                $this->monPdo->rollBack();
+                return null;
+            }
+
+            $requeteFiches = $this->monPdo->prepare(
+                "select * from fichefrais where idVisiteur = :id order by mois"
+            );
+            $requeteFiches->execute(['id' => $idVisiteur]);
+            $fiches = $requeteFiches->fetchAll(PDO::FETCH_ASSOC);
+
+            $requeteLignes = $this->monPdo->prepare(
+                "select * from lignefraisforfait where idVisiteur = :id order by mois, idFraisForfait"
+            );
+            $requeteLignes->execute(['id' => $idVisiteur]);
+            $lignes = $requeteLignes->fetchAll(PDO::FETCH_ASSOC);
+
+            $fichesParMois = [];
+            foreach ($fiches as $fiche) {
+                $fiche['flat_fee_lines'] = [];
+                $fichesParMois[$fiche['mois']] = $fiche;
+            }
+            foreach ($lignes as $ligne) {
+                $fichesParMois[$ligne['mois']]['flat_fee_lines'][] = $ligne;
+            }
+
+            $archive = [
+                'format_version' => 1,
+                'exported_at' => date(DATE_ATOM),
+                'visitor' => $visiteur,
+                'expense_reports' => array_values($fichesParMois),
+            ];
+            $cheminArchive = $archiver($archive);
+            if (!is_string($cheminArchive) || $cheminArchive === '') {
+                throw new RuntimeException("L’archivage du visiteur n’a pas retourné de chemin valide.");
+            }
+
+            $requeteSuppressionLignes = $this->monPdo->prepare(
+                "delete from lignefraisforfait where idVisiteur = :id"
+            );
+            $requeteSuppressionLignes->execute(['id' => $idVisiteur]);
+
+            $requeteSuppressionFiches = $this->monPdo->prepare(
+                "delete from fichefrais where idVisiteur = :id"
+            );
+            $requeteSuppressionFiches->execute(['id' => $idVisiteur]);
+
+            $requeteSuppressionVisiteur = $this->monPdo->prepare(
+                "delete from visiteur where id = :id"
+            );
+            $requeteSuppressionVisiteur->execute(['id' => $idVisiteur]);
+            if ($requeteSuppressionVisiteur->rowCount() !== 1) {
+                throw new RuntimeException("La suppression du visiteur a échoué.");
+            }
+
+            $this->monPdo->commit();
+            return $cheminArchive;
+        } catch (Throwable $exception) {
+            if ($this->monPdo->inTransaction()) {
+                $this->monPdo->rollBack();
+            }
+
+            throw $exception;
+        }
     }
 
     /**

@@ -17,8 +17,10 @@
     </div>
 @endsection
 
-@section('contenu1')
-    <div id="contenu">
-        <h2>Menu principal du gestionnaire</h2>
-    </div>
-@endsection
+@if (!empty($afficherAccueilGestionnaire))
+    @section('contenu1')
+        <div id="contenu">
+            <h2>Menu principal du gestionnaire</h2>
+        </div>
+    @endsection
+@endif

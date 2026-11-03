@@ -7,6 +7,7 @@
             Confirmez-vous la suppression de
             <strong>{{ $visiteur['nom'] }} {{ $visiteur['prenom'] }}</strong> ?
         </p>
+        <p>Toutes ses données, y compris ses fiches de frais, seront archivées en JSON avant la suppression.</p>
         <form method="post" action="{{ route('chemin_supprimerVisiteur', ['id' => $visiteur['id']]) }}">
             @csrf
             @method('DELETE')
