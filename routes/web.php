@@ -1,11 +1,11 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-// Chemin des contrôleurs
 use App\Http\Controllers\connexionController;
+// Chemin des contrôleurs
 use App\Http\Controllers\etatFraisController;
 use App\Http\Controllers\gererFraisController;
 use App\Http\Controllers\gererVisiteurController;
+use Illuminate\Support\Facades\Route;
 
 // Connexion : accessible sans être connecté
 Route::controller(connexionController::class)->group(function () {
@@ -25,7 +25,8 @@ Route::middleware('visiteur')->controller(gererFraisController::class)->group(fu
     Route::post('/sauvegarderFrais', 'sauvegarderFrais')->name('chemin_sauvegardeFrais');
 });
 
-Route::controller(gererVisiteurController::class)->group(function () {
+// Pages du gestionnaire : réservées au gestionnaire connecté
+Route::middleware('gestionnaire')->controller(gererVisiteurController::class)->group(function () {
     Route::get('/sommaireGestionnaire', 'sommaire')->name('chemin_menuGestionnaire');
     Route::get('/gererVisiteur', 'listeVisiteurs')->name('chemin_listeVisiteurs');
     Route::post('/gererVisiteur/confirmer', 'confirmerSuppression')->name('chemin_confirmerSuppressionVisiteur');

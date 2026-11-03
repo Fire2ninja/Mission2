@@ -28,6 +28,28 @@ class GererVisiteurTest extends TestCase
             ->assertRedirect(route('chemin_connexion'));
     }
 
+    public function test_a_visiteur_cannot_access_visitor_management(): void
+    {
+        $this->withSession(['visiteur' => ['id' => 'a131', 'nom' => 'Villechalane', 'prenom' => 'Louis']]);
+        PdoGsb::shouldNotReceive('getLesVisiteurs');
+        PdoGsb::shouldNotReceive('archiverEtSupprimerVisiteur');
+
+        $this->get(route('chemin_listeVisiteurs'))
+            ->assertRedirect(route('chemin_connexion'));
+
+        $this->delete(route('chemin_supprimerVisiteur', ['id' => 'b16']))
+            ->assertRedirect(route('chemin_connexion'));
+    }
+
+    public function test_pages_du_visiteur_sont_bloquees_sans_connexion(): void
+    {
+        $this->get(route('chemin_gestionFrais'))
+            ->assertRedirect(route('chemin_connexion'));
+
+        $this->get(route('chemin_selectionMois'))
+            ->assertRedirect(route('chemin_connexion'));
+    }
+
     public function test_a_gestionnaire_can_open_the_visitor_list(): void
     {
         $this->actingAsGestionnaire();
@@ -66,9 +88,12 @@ class GererVisiteurTest extends TestCase
             'prenom' => 'Louis',
         ]);
 
+        PdoGsb::shouldReceive('getNbFichesVisiteur')->once()->with('a131')->andReturn(3);
+
         $this->post(route('chemin_confirmerSuppressionVisiteur'), ['idVisiteur' => 'a131'])
             ->assertOk()
             ->assertViewIs('confirmationSuppressionVisiteur')
+            ->assertSee('possède 3 fiche(s) de frais', false)
             ->assertSee('y compris ses fiches de frais');
     }
 
@@ -81,9 +106,12 @@ class GererVisiteurTest extends TestCase
             'prenom' => 'Luc',
         ]);
 
+        PdoGsb::shouldReceive('getNbFichesVisiteur')->once()->with('b16')->andReturn(0);
+
         $this->post(route('chemin_confirmerSuppressionVisiteur'), ['idVisiteur' => 'b16'])
             ->assertOk()
-            ->assertSee('Bioret Luc');
+            ->assertSee('Bioret Luc')
+            ->assertSee('ne possède aucune fiche de frais', false);
     }
 
     public function test_deletion_archives_all_visitor_and_expense_data_before_deleting(): void
@@ -140,6 +168,7 @@ class GererVisiteurTest extends TestCase
             'nom' => 'Villechalane',
             'prenom' => 'Louis',
         ]);
+        PdoGsb::shouldReceive('getNbFichesVisiteur')->once()->with('a131')->andReturn(3);
         PdoGsb::shouldNotReceive('archiverEtSupprimerVisiteur');
 
         $this->post(route('chemin_confirmerSuppressionVisiteur'), ['idVisiteur' => 'a131'])
