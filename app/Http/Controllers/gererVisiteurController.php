@@ -77,7 +77,7 @@ class gererVisiteurController extends Controller
                     );
 
                     if (!Storage::disk('local')->put($cheminArchive, $contenu)) {
-                        throw new RuntimeException("Impossible d’écrire le fichier d’archive.");
+                        throw new RuntimeException('Impossible d’écrire le fichier d’archive.');
                     }
 
                     return $cheminArchive;
