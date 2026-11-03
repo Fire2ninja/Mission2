@@ -52,7 +52,8 @@ class gererVisiteurController extends Controller
 
         return view('confirmationSuppressionVisiteur')
             ->with('gestionnaire', session('gestionnaire'))
-            ->with('visiteur', $visiteur);
+            ->with('visiteur', $visiteur)
+            ->with('nbFiches', PdoGsb::getNbFichesVisiteur($idVisiteur));
     }
 
     public function supprimerVisiteur(string $id)

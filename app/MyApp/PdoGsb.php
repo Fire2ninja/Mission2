@@ -33,7 +33,7 @@ class PdoGsb
         );
         $this->monPdo->query("SET CHARACTER SET utf8");
     }
-    public function _destruct()
+    public function __destruct()
     {
         $this->monPdo = null;
     }
@@ -75,6 +75,19 @@ class PdoGsb
         $res = $this->monPdo->prepare($req);
         $res->execute(['id' => $idVisiteur]);
         return $res->fetch(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Retourne le nombre de fiches de frais d'un visiteur
+     * @param $idVisiteur
+     * @return int
+     */
+    public function getNbFichesVisiteur(string $idVisiteur): int
+    {
+        $req = "select count(*) as nb from fichefrais where idVisiteur = :id";
+        $res = $this->monPdo->prepare($req);
+        $res->execute(['id' => $idVisiteur]);
+        return (int) $res->fetch(PDO::FETCH_ASSOC)['nb'];
     }
 
     /**
@@ -339,7 +352,7 @@ class PdoGsb
 
     public function majEtatFicheFrais($idVisiteur, $mois, $etat)
     {
-        $req = "update ficheFrais set idEtat = :etat, dateModif = now()
+        $req = "update fichefrais set idEtat = :etat, dateModif = now()
 		where fichefrais.idvisiteur = :idVisiteur and fichefrais.mois = :mois";
         $rs = $this->monPdo->prepare($req);
         $rs->execute(['etat' => $etat, 'idVisiteur' => $idVisiteur, 'mois' => $mois]);    }
