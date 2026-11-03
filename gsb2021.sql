@@ -4352,6 +4352,32 @@ INSERT INTO `visiteur` (`id`, `nom`, `prenom`, `login`, `mdp`, `adresse`, `cp`, 
 ('f39', 'Frémont', 'Fernande', 'ffremont', 'xs5tq', '4 route de la mer', '13012', 'Allauh', '2008-10-01'),
 ('f4', 'Gest', 'Alain', 'agest', 'dywvt', '30 avenue de la mer', '13025', 'Berre', '1995-11-01');
 
+
+
+
+--
+-- Structure de la table `gestionnaire`
+--
+
+CREATE TABLE IF NOT EXISTS `gestionnaire` (
+  `id` char(4) NOT NULL,
+  `nom` char(30) DEFAULT NULL,
+  `prenom` char(30) DEFAULT NULL,
+  `login` char(20) DEFAULT NULL,
+  `mdp` char(20) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+--
+-- Contenu de la table `gestionnaire`
+--
+
+
+INSERT INTO `gestionnaire` (`id`, `nom`, `prenom`, `login`, `mdp`)
+VALUES ('g001', 'Gestion', 'Service', 'gestion', '7K5t3');
+
+
+
 --
 -- Contraintes pour les tables exportées
 --
