@@ -10,8 +10,7 @@
                     <strong>Bonjour {{ $gestionnaire['nom'] . ' ' . $gestionnaire['prenom'] }}</strong>
                    </li>
                   <li class="smenu">
-                     {{-- À remplacer par route('chemin_supprimerVisiteur') quand la route de Mathys existera --}}
-                     <a href="#" title="Supprimer un visiteur">Supprimer un visiteur</a>
+                     <a href="{{ route('chemin_listeVisiteurs') }}" title="Gérer les visiteurs">Gérer les visiteurs</a>
                   </li>
                <li class="smenu">
                 <a href="{{ route('chemin_deconnexion') }}" title="Se déconnecter">Déconnexion</a>
@@ -19,3 +18,11 @@
                 </ul>
         </div>
     @endsection
+
+    @if (!empty($afficherAccueilGestionnaire))
+        @section('contenu1')
+            <div id="contenu">
+                <h2>Menu principal du gestionnaire</h2>
+            </div>
+        @endsection
+    @endif
